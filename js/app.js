@@ -7,7 +7,7 @@ import { renderLatex } from './math.js';
 import { renderSequenceDiagram } from './sequence-diagram.js';
 import { createRoiController } from './rois.js';
 
-const state = { object: 'brain', sequence: 'SE', slice: 50, parameters: defaultParameters(sequences.SE), darkMode: false, showEquations: false, showDiagram: false, noiseFree: false,
+const state = { object: 'brain', sequence: 'SE', slice: 50, parameters: defaultParameters(sequences.SE), darkMode: true, showEquations: false, showDiagram: false, noiseFree: false,
   showRois: false, roiSets: new Map() };
 const elements = Object.fromEntries(['object', 'image-object', 'sequence', 'parameters', 'slice', 'slice-value', 'sequence-description',
   'simulation-controls', 'mri-image', 'image-sequence', 'image-slice', 'status', 'loading', 'load-message',
@@ -71,7 +71,8 @@ function updateViewOptions() {
   elements['equation-number'].textContent = state.showRois ? '05' : '04';
   elements['diagram-number'].textContent = String(4 + Number(state.showEquations) + Number(state.showRois)).padStart(2, '0');
 }
-try { state.darkMode = localStorage.getItem('mrilab-dark-mode') === 'true'; } catch { /* Storage is optional. */ }
+// Use dark mode unless the user saved a light-mode preference.
+try { state.darkMode = localStorage.getItem('mrilab-dark-mode') !== 'false'; } catch { /* Storage is optional. */ }
 elements['dark-mode'].addEventListener('change', () => {
   state.darkMode = elements['dark-mode'].checked;
   updateViewOptions();
