@@ -12,6 +12,31 @@ python3 -m http.server 8000
 
 Open `http://localhost:8000`. Python in this example only serves files; it is not part of the application. Opening `index.html` through `file://` is unsupported because browsers restrict module and data fetching. Deploy the directory as-is to any static host, including under a subpath. Serve JavaScript with its normal MIME type and include `data/phantom.bin` and `data/phantom.json`.
 
+## Publish on GitHub Pages
+
+This app can be served directly from the repository; no build step is needed.
+The `.nojekyll` file tells GitHub Pages to serve the static files without Jekyll.
+
+1. Commit and push the Pages files from this directory:
+
+   ```sh
+   git add .nojekyll README.md
+   git commit -m "Prepare GitHub Pages publishing"
+   git push origin main
+   ```
+
+2. Open [the repository's Pages settings](https://github.com/mrphysicsgbg/MRILab/settings/pages).
+3. Under **Build and deployment**, select **Deploy from a branch**.
+4. Choose **main** and **/(root)**, then click **Save**.
+5. Wait for the Pages deployment to finish in the repository's **Actions** tab.
+6. Open [MRILab](https://mrphysicsgbg.github.io/MRILab/).
+
+Future pushes to `main` update the site automatically. All assets, including the
+phantom and MathJax, use relative URLs compatible with the `/MRILab/` path.
+If Pages settings are unavailable, check your repository permissions and GitHub
+plan; public repositories support Pages on GitHub Free.
+See [GitHub's publishing instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
+
 ## Behavior
 
 Choose Spin Echo, Inversion Recovery or Gradient Echo. Controls and defaults are generated from `js/sequences.js`. Sequence changes restore that sequence's defaults; reset restores parameters and retains your slice. The slice selector covers zero-based indices 0–89, starting at 50.
