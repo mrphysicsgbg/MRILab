@@ -17,7 +17,6 @@
           <h1><a class="brand" href="./" aria-label="MRILab home">MRI<span class="brand-light">Lab</span></a></h1>
           <span class="title-subtitle">An interactive contrast laboratory</span>
         </div>
-        <p class="intro-copy">Simulate pulse-sequence contrast using a digital brain phantom.<br>Adjust acquisition parameters and inspect voxel signals.</p>
       </div>
       <div class="settings" role="group" aria-label="Display options">
         <label class="switch-label"><input id="dark-mode" type="checkbox" role="switch" checked><span class="switch-track" aria-hidden="true"></span>Dark mode</label>
@@ -28,13 +27,8 @@
     </div>
     <section id="lab" class="lab" aria-label="MRI contrast simulator">
       <div class="control-panels">
-      <aside class="object-panel" aria-labelledby="object-title">
-        <div class="section-heading"><span class="section-index">01</span><h2 id="object-title">Simulation object</h2></div>
-        <label class="field-label" for="object">Object</label>
-        <div class="select-wrap"><select id="object" disabled></select></div>
-      </aside>
       <aside class="controls" aria-labelledby="parameters-title">
-        <div class="section-heading"><span class="section-index">02</span><h2 id="parameters-title">Sequence & parameters</h2></div>
+        <div class="section-heading"><span class="section-index">01</span><h2 id="parameters-title">Sequence & parameters</h2></div>
         <fieldset id="simulation-controls" disabled>
           <label class="field-label" for="sequence">Pulse sequence</label>
           <div class="select-wrap"><select id="sequence"></select></div>
@@ -48,48 +42,56 @@
           </div>
           <button id="reset" type="button"><span aria-hidden="true">↺</span> Reset parameters</button>
         </fieldset>
-        <div class="control-note"><span class="note-dot" aria-hidden="true"></span><p>Change one parameter at a time to see its effect on contrast.</p></div>
       </aside>
-      </div>
-      <div class="viewer">
-        <div class="viewer-header"><div class="section-heading"><span class="section-index">03</span><h2>Simulated image</h2></div></div>
-        <div id="image-stage" class="image-stage" title="Scroll down for the next slice; scroll up for the previous slice.">
-          <div class="image-label"><span id="image-sequence">SPIN ECHO</span><span id="image-slice">SLICE 50</span></div>
-          <div id="image-plane" class="image-plane" hidden>
-            <canvas id="mri-image" role="img" aria-label="Simulated MRI brain image" hidden></canvas>
-            <svg id="roi-overlay" class="roi-overlay" hidden aria-label="Draw regions on the image"></svg>
-          </div>
-          <div class="loading" id="loading"><span class="loading-orbit" aria-hidden="true"></span><p id="load-message">Loading brain phantom…</p><button id="retry" type="button" hidden>Try again</button></div>
-          <span id="image-object" class="image-caption">DIGITAL BRAIN PHANTOM</span>
-        </div>
-        <div class="viewer-footer"><span>Magnitude image <span class="footer-divider">/</span> Auto-normalized</span><span class="grayscale" aria-hidden="true"></span></div>
-        <p class="scroll-hint">Scroll over the image to change slices.</p>
-        <p id="status" class="status" role="status" aria-live="polite">Loading the phantom once. All simulation runs in your browser.</p>
-        <div class="pixel-inspector" aria-label="Voxel measurements">
-          <div class="pixel-heading"><h3>Voxel values</h3><span id="pixel-position">Hover over the image</span></div>
-          <dl class="pixel-values">
-            <div><dt>Raw signal</dt><dd id="pixel-signal">—</dd></div>
-            <div><dt>Magnitude</dt><dd id="pixel-magnitude">—</dd></div>
-            <div><dt>Noise</dt><dd id="pixel-noise">—</dd></div>
-            <div><dt>Gray level / 255</dt><dd id="pixel-gray">—</dd></div>
-            <div><dt>ρ</dt><dd id="pixel-rho">—</dd></div>
-            <div><dt>T1 (s)</dt><dd id="pixel-t1">—</dd></div>
-            <div><dt>T2 (s)</dt><dd id="pixel-t2">—</dd></div>
-            <div><dt>T2* (s)</dt><dd id="pixel-t2star">—</dd></div>
-          </dl>
-          <p class="inspector-note">Signals in arbitrary units. Relaxation values show the original phantom maps.</p>
-        </div>
-      </div>
       <aside id="roi-panel" class="roi-panel" hidden aria-labelledby="roi-title">
-        <div class="section-heading"><span class="section-index">04</span><h2 id="roi-title">Regions & contrast</h2></div>
-        <p class="roi-instructions">Draw up to three regions on the image. Trace a region and release to close it. Edit names below; use Redraw to change a boundary.</p>
+        <div class="section-heading"><span class="section-index">03</span><h2 id="roi-title">Regions & contrast</h2></div>
+        <p id="roi-slice-note" class="roi-instructions">Draw up to three regions. Regions belong to slice 50; returning to a slice restores its regions.</p>
         <fieldset id="roi-controls" disabled>
           <div id="roi-list" class="roi-list"></div>
           <button id="roi-cancel" type="button" disabled>Cancel drawing</button>
         </fieldset>
-        <p id="roi-chart-caption" class="roi-instructions"></p>
-        <p id="roi-status" class="roi-instructions" role="status" aria-live="polite">Select Draw, then trace a region on the image.</p>
+        <p id="roi-status" class="roi-instructions" role="status" aria-live="polite"></p>
       </aside>
+      </div>
+      <div class="viewer">
+        <div class="viewer-header">
+          <div class="section-heading"><span class="section-index">02</span><h2>Simulation object & image</h2></div>
+          <div class="object-selection">
+            <label class="field-label" for="object">Object</label>
+            <div class="select-wrap"><select id="object" disabled></select></div>
+          </div>
+        </div>
+        <div class="viewer-content">
+          <div id="image-stage" class="image-stage" title="Scroll down for the next slice; scroll up for the previous slice.">
+            <div class="image-label"><span id="image-sequence">SPIN ECHO</span><span id="image-slice">SLICE 50</span></div>
+            <div id="image-plane" class="image-plane" hidden>
+              <canvas id="mri-image" role="img" aria-label="Simulated MRI brain image" hidden></canvas>
+              <svg id="roi-overlay" class="roi-overlay" hidden aria-label="Draw regions on the image"></svg>
+            </div>
+            <div class="loading" id="loading"><span class="loading-orbit" aria-hidden="true"></span><p id="load-message">Loading brain phantom…</p><button id="retry" type="button" hidden>Try again</button></div>
+            <span id="image-object" class="image-caption">DIGITAL BRAIN PHANTOM</span>
+          </div>
+          <div class="image-details">
+            <div class="viewer-footer"><span>Magnitude image <span class="footer-divider">/</span> Auto-normalized</span><span class="grayscale" aria-hidden="true"></span></div>
+            <p class="scroll-hint">Scroll over the image to change slices.</p>
+            <p id="status" class="status" role="status" aria-live="polite">Loading the phantom once. All simulation runs in your browser.</p>
+            <div class="pixel-inspector" aria-label="Voxel measurements">
+              <div class="pixel-heading"><h3>Voxel values</h3><span id="pixel-position">Hover over the image</span></div>
+              <dl class="pixel-values">
+                <div><dt>Raw signal</dt><dd id="pixel-signal">—</dd></div>
+                <div><dt>Magnitude</dt><dd id="pixel-magnitude">—</dd></div>
+                <div><dt>Noise</dt><dd id="pixel-noise">—</dd></div>
+                <div><dt>Gray level / 255</dt><dd id="pixel-gray">—</dd></div>
+                <div><dt>ρ</dt><dd id="pixel-rho">—</dd></div>
+                <div><dt>T1 (s)</dt><dd id="pixel-t1">—</dd></div>
+                <div><dt>T2 (s)</dt><dd id="pixel-t2">—</dd></div>
+                <div><dt>T2* (s)</dt><dd id="pixel-t2star">—</dd></div>
+              </dl>
+              <p class="inspector-note">Signals in arbitrary units. Relaxation values show the original phantom maps.</p>
+            </div>
+          </div>
+        </div>
+      </div>
       <aside id="equations-panel" class="equations-panel" hidden aria-label="Signal equations">
         <div class="section-heading"><span id="equation-number" class="section-index">04</span><h2>Signal equations</h2></div>
         <h3 id="equation-sequence"></h3>

@@ -35,7 +35,7 @@ test('three ROIs can be drawn, renamed, redrawn, deleted and restored per slice'
     document.createElement = tag => new Node(tag);
     document.createElementNS = (_, tag) => new Node(tag);
     const elements = Object.fromEntries(['roi-overlay', 'roi-cancel', 'roi-status',
-      'roi-controls', 'roi-list', 'roi-chart-caption'].map(id => [id, new Node()]));
+      'roi-controls', 'roi-list', 'roi-slice-note'].map(id => [id, new Node()]));
     // Match an SVG's initial markup. A .hidden assignment alone cannot clear it.
     elements['roi-overlay'].setAttribute('hidden', '');
     const state = { object: 'brain', slice: 50, showRois: true, sequence: 'SE', parameters: { TR: 1, TE: 0.1 },
@@ -83,7 +83,7 @@ test('three ROIs can be drawn, renamed, redrawn, deleted and restored per slice'
     state.parameters.FA = 30; controller.update();
     assert.notDeepEqual(controller.getPlot().trace.curves[0].values, originalPlot);
     state.parameters.TE = 0.02; controller.update();
-    assert.ok(elements['roi-chart-caption'].textContent.includes('TE = 0.020 s'));
+    assert.equal(controller.getPlot().trace.sampleTime, 0.020);
     const svg = new Node('svg');
     renderSequenceDiagram(svg, sequences.GRE, state.parameters, controller.getPlot());
     assert.equal(svg.attributes.viewBox, '0 0 900 780');

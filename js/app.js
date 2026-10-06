@@ -16,7 +16,7 @@ const elements = Object.fromEntries(['object', 'image-object', 'sequence', 'para
   'pixel-noise', 'pixel-gray', 'pixel-rho', 'pixel-t1', 'pixel-t2', 'pixel-t2star',
   'show-diagram', 'diagram-panel', 'diagram-number', 'diagram-sequence', 'sequence-diagram', 'diagram-notes', 'diagram-signal-description',
   'define-rois', 'roi-panel', 'roi-overlay', 'image-plane', 'roi-list', 'roi-controls', 'roi-cancel',
-  'roi-chart-caption', 'roi-status', 'equation-number'].map(id => [id, document.getElementById(id)]));
+  'roi-slice-note', 'roi-status', 'equation-number'].map(id => [id, document.getElementById(id)]));
 let phantom;
 const loadedObjects = new Map();
 let signal;
@@ -68,8 +68,8 @@ function updateViewOptions() {
   elements['roi-panel'].hidden = !state.showRois;
   elements.lab.classList.toggle('with-rois', state.showRois);
   elements.lab.closest('main').classList.toggle('with-rois', state.showRois);
-  elements['equation-number'].textContent = state.showRois ? '05' : '04';
-  elements['diagram-number'].textContent = String(4 + Number(state.showEquations) + Number(state.showRois)).padStart(2, '0');
+  elements['equation-number'].textContent = state.showRois ? '04' : '03';
+  elements['diagram-number'].textContent = String(3 + Number(state.showEquations) + Number(state.showRois)).padStart(2, '0');
 }
 // Use dark mode unless the user saved a light-mode preference.
 try { state.darkMode = localStorage.getItem('mrilab-dark-mode') !== 'false'; } catch { /* Storage is optional. */ }

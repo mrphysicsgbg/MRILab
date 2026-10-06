@@ -39,7 +39,7 @@ export function createRoiController({ state, elements, getPhantom, getRenderer, 
     overlay.classList.add('drawing');
     drawOverlay();
     elements['roi-cancel'].disabled = false;
-    status(`Draw ${currentSet().labels[slot] || `ROI ${slot + 1}`} on the image: press, trace a closed region, then release. Escape cancels.`);
+    status('');
   }
 
   // Keep ROI boundaries in phantom pixel coordinates.
@@ -176,13 +176,14 @@ export function createRoiController({ state, elements, getPhantom, getRenderer, 
 
   // Reuse curves until the ROI or simulation inputs change.
   function update(notify = true) {
+    elements['roi-slice-note'].textContent = `Draw up to three regions. Regions belong to slice ${state.slice}; returning to a slice restores its regions.`;
     const phantom = getPhantom();
     elements['roi-controls'].disabled = !phantom;
     if (!state.showRois) { currentPlot = null; cancelDrawing(); overlay.setAttribute('hidden', ''); return; }
     if (!phantom) { currentPlot = null; overlay.setAttribute('hidden', ''); status('Load a simulation object to draw regions.'); return; }
     if (context !== key()) {
       cancelDrawing(); context = key(); listContext = ''; cachedKey = '';
-      status(`Regions belong to slice ${state.slice}. Draw up to three regions; returning to a slice restores its regions.`);
+      status('');
     }
     const sequence = sequences[state.sequence];
     const set = currentSet();
@@ -209,7 +210,6 @@ export function createRoiController({ state, elements, getPhantom, getRenderer, 
       output.textContent = region ? `${region.indices.length} pixels · Mean ${Number.isFinite(mean) ? mean.toPrecision(5) : 'undefined'} a.u.` : 'Not drawn';
     });
     currentPlot = { trace: cachedTrace, means, signedMeans };
-    elements['roi-chart-caption'].textContent = `Curves are shown in the sequence diagram's signal track. ${state.noiseFree ? 'Noise free' : 'Current voxel noise held fixed'} · Image sampled ${state.sequence === 'IR' ? `at t = ${(state.parameters.TI + state.parameters.TE).toFixed(3)} s (TI + TE)` : `at TE = ${state.parameters.TE.toFixed(3)} s`}.`;
     if (notify) onPlot?.();
   }
 
