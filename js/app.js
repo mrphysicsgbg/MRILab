@@ -15,8 +15,9 @@ const elements = Object.fromEntries(['object', 'image-object', 'sequence', 'para
   'equation-sequence', 'signal-equation', 'display-equation', 'pixel-position', 'pixel-signal', 'pixel-magnitude',
   'pixel-noise', 'pixel-gray', 'pixel-rho', 'pixel-t1', 'pixel-t2', 'pixel-t2star',
   'show-diagram', 'diagram-panel', 'diagram-number', 'diagram-sequence', 'sequence-diagram', 'diagram-notes', 'diagram-signal-description',
-  'define-rois', 'roi-panel', 'roi-overlay', 'image-plane', 'roi-list', 'roi-controls', 'roi-cancel',
-  'roi-slice-note', 'roi-status', 'equation-number'].map(id => [id, document.getElementById(id)]));
+  'define-rois', 'roi-panel', 'roi-overlay', 'roi-drawing-overlay', 'image-plane', 'roi-list', 'roi-controls', 'roi-cancel',
+  'roi-slice-note', 'roi-status', 'equation-number', 'simulation-view', 'mobile-equations-panel',
+  'mobile-diagram-panel', 'mobile-roi-panel', 'mobile-roi-dock', 'mobile-noise-free'].map(id => [id, document.getElementById(id)]));
 let phantom;
 const loadedObjects = new Map();
 let signal;
@@ -24,6 +25,37 @@ let renderer;
 let pendingFrame = null;
 let hoveredPixel = null;
 let roiController;
+
+// Move the existing controls so reading and keyboard order follow the phone layout.
+const phoneLayout = window.matchMedia('(max-width: 620px)');
+const controls = document.querySelector('.controls');
+const controlPanels = document.querySelector('.control-panels');
+const viewerContent = document.querySelector('.viewer-content');
+const viewerHeading = document.querySelector('.viewer-header h2');
+const viewerIndex = document.querySelector('.viewer-header .section-index');
+const desktopViewerTitle = viewerHeading.textContent;
+const expandablePanels = [
+  ['showEquations', 'equations-panel', 'mobile-equations-panel'],
+  ['showDiagram', 'diagram-panel', 'mobile-diagram-panel'],
+  ['showRois', 'roi-panel', 'mobile-roi-panel'],
+];
+function updatePhoneLayout() {
+  if (phoneLayout.matches) {
+    viewerContent.insertBefore(controls, document.querySelector('.image-details'));
+    for (const [, panel, disclosure] of expandablePanels) elements[disclosure].append(elements[panel]);
+    controls.append(elements.status);
+  } else {
+    controlPanels.prepend(controls);
+    controlPanels.append(elements['roi-panel']);
+    elements.lab.append(elements['equations-panel'], elements['diagram-panel']);
+    document.querySelector('.image-details').insertBefore(elements.status, document.querySelector('.pixel-inspector'));
+  }
+  viewerHeading.textContent = phoneLayout.matches ? 'Simulation & parameters' : desktopViewerTitle;
+  viewerIndex.textContent = phoneLayout.matches ? '01–02' : '02';
+  updateViewOptions();
+}
+phoneLayout.addEventListener('change', updatePhoneLayout);
+updatePhoneLayout();
 
 function updatePixelReadout() {
   const keys = ['signal', 'magnitude', 'noise', 'gray', 'rho', 't1', 't2', 't2star'];
@@ -45,7 +77,7 @@ function updatePixelReadout() {
 }
 
 function hoverPixel(event, leave = false) {
-  if (!phantom) return;
+  if (!phantom || phoneLayout.matches) return;
   hoveredPixel = leave ? null : pixelAt(event.clientX, event.clientY, elements['mri-image'].getBoundingClientRect(), phantom.width, phantom.height);
   updatePixelReadout();
 }
@@ -53,9 +85,16 @@ elements['mri-image'].addEventListener('pointermove', hoverPixel);
 elements['mri-image'].addEventListener('pointerleave', () => { hoveredPixel = null; updatePixelReadout(); });
 
 // Show selected panels and keep their numbering consistent.
+function updateRoiDisplayState() {
+  const hasRegions = [...state.roiSets.values()].some(set => set.regions.some(Boolean));
+  elements.lab.classList.toggle('has-defined-rois', hasRegions);
+}
+
 function updateViewOptions() {
-  document.documentElement.dataset.theme = state.darkMode ? 'dark' : 'light';
-  document.querySelector('meta[name="theme-color"]').content = state.darkMode ? '#151c1b' : '#f5f4ef';
+  updateRoiDisplayState();
+  const darkMode = phoneLayout.matches || state.darkMode;
+  document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]').content = darkMode ? '#151c1b' : '#f5f4ef';
   elements['dark-mode'].checked = state.darkMode;
   elements['show-equations'].checked = state.showEquations;
   elements['equations-panel'].hidden = !state.showEquations;
@@ -70,6 +109,16 @@ function updateViewOptions() {
   elements.lab.closest('main').classList.toggle('with-rois', state.showRois);
   elements['equation-number'].textContent = state.showRois ? '04' : '03';
   elements['diagram-number'].textContent = String(3 + Number(state.showEquations) + Number(state.showRois)).padStart(2, '0');
+  for (const [key, , disclosure] of expandablePanels) elements[disclosure].open = state[key];
+  // ROI editing occupies the bottom dock instead of reducing the drawing area.
+  if (phoneLayout.matches) {
+    const roiParent = state.showRois ? elements['mobile-roi-dock'] : elements['mobile-roi-panel'];
+    if (elements['roi-panel'].parentElement !== roiParent) roiParent.append(elements['roi-panel']);
+    const statusParent = state.showRois ? elements['mobile-roi-dock'] : controls;
+    if (elements.status.parentElement !== statusParent) statusParent.append(elements.status);
+  }
+  const expandedCount = expandablePanels.filter(([key]) => key !== 'showRois' && state[key]).length;
+  elements.lab.dataset.expandedPanels = String(expandedCount);
 }
 // Use dark mode unless the user saved a light-mode preference.
 try { state.darkMode = localStorage.getItem('mrilab-dark-mode') !== 'false'; } catch { /* Storage is optional. */ }
@@ -78,6 +127,24 @@ elements['dark-mode'].addEventListener('change', () => {
   updateViewOptions();
   try { localStorage.setItem('mrilab-dark-mode', String(state.darkMode)); } catch { /* Storage is optional. */ }
 });
+for (const [key, , disclosure] of expandablePanels) {
+  elements[disclosure].addEventListener('toggle', () => {
+    if (!phoneLayout.matches || state[key] === elements[disclosure].open) return;
+    state[key] = elements[disclosure].open;
+    if (key === 'showRois') {
+      if (state.showRois) {
+        state.showDiagram = false;
+        roiController?.update();
+      } else {
+        // Collapse only the editor. Retain the saved overlay and plot data.
+        roiController?.cancelDrawing();
+      }
+    }
+    updateViewOptions();
+    updateEquations();
+    updateDiagram();
+  });
+}
 elements['show-equations'].addEventListener('change', () => {
   state.showEquations = elements['show-equations'].checked;
   updateViewOptions();
@@ -90,7 +157,6 @@ elements['show-diagram'].addEventListener('change', () => {
 });
 elements['define-rois'].addEventListener('change', () => {
   state.showRois = elements['define-rois'].checked;
-  if (state.showRois) state.showDiagram = true;
   updateViewOptions();
   roiController.update();
   updateDiagram();
@@ -98,11 +164,15 @@ elements['define-rois'].addEventListener('change', () => {
 });
 updateViewOptions();
 elements['noise-free'].checked = state.noiseFree;
-elements['noise-free'].addEventListener('change', () => {
-  state.noiseFree = elements['noise-free'].checked;
+function setNoiseFree(value) {
+  state.noiseFree = value;
+  elements['noise-free'].checked = value;
+  elements['mobile-noise-free'].setAttribute('aria-pressed', String(value));
   updateEquations();
   scheduleRender();
-});
+}
+elements['noise-free'].addEventListener('change', () => setNoiseFree(elements['noise-free'].checked));
+elements['mobile-noise-free'].addEventListener('click', () => setNoiseFree(!state.noiseFree));
 
 function updateRange(input) {
   const progress = 100 * (Number(input.value) - Number(input.min)) / (Number(input.max) - Number(input.min));
@@ -124,13 +194,15 @@ function updateEquations() {
 }
 
 function updateDiagram() {
+  updateRoiDisplayState();
   if (!state.showDiagram) return;
   const sequence = sequences[state.sequence];
+  const roiPlot = roiController?.getPlot();
   elements['diagram-sequence'].textContent = sequence.label;
   elements['diagram-notes'].textContent = renderSequenceDiagram(elements['sequence-diagram'], sequence, state.parameters,
-    state.showRois ? roiController?.getPlot() : null).join(' ');
-  elements['diagram-signal-description'].textContent = state.showRois
-    ? (state.sequence === 'IR' ? 'ROI curves start at inversion (t = 0): longitudinal recovery before TI, transverse decay after excitation. Solid: signed mean + noise. Dotted: mean magnitude. Image sampling occurs at TI + TE.' : 'RF heights indicate flip angle. Gradients and pulse widths are schematic. The enlarged signal track shows ROI mean magnitude; time starts at excitation, and image sampling is marked at TE.')
+    roiPlot).join(' ');
+  elements['diagram-signal-description'].textContent = roiPlot
+    ? (state.sequence === 'IR' ? 'ROI curves start at inversion (t = 0): longitudinal recovery before TI, transverse decay after excitation. Solid: mean magnitude. Dotted: signed mean + noise. Image sampling occurs at TI + TE.' : 'RF heights indicate flip angle. Gradients and pulse widths are schematic. The enlarged signal track shows ROI mean magnitude; time starts at excitation, and image sampling is marked at TE.')
     : 'RF heights indicate flip angle. Gradient shapes and pulse widths are schematic. The signal is a normalized echo illustration, independent of the image and noise.';
 }
 

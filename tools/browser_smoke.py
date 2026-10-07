@@ -116,11 +116,15 @@ def run(url, screenshot):
         assert image() == same_slice, 'An unchanged slice must retain its noise'
         assert len(requests) == network_count, "Interactions must not fetch data"
         assert not errors, errors
+        page.locator('#show-diagram').uncheck()
         page.locator('#define-rois').check()
+        assert not page.locator('#show-diagram').is_checked()
+        assert not page.locator('#diagram-panel').is_visible()
+        page.locator('#show-diagram').check()
         assert page.locator('#roi-panel').is_visible()
-        assert page.locator('#roi-overlay').is_visible()
-        assert page.locator('#roi-overlay').get_attribute('hidden') is None
-        assert page.locator('#sequence-diagram').get_attribute('viewBox') == '0 0 900 780'
+        assert page.locator('#roi-drawing-overlay').is_visible()
+        assert page.locator('#roi-drawing-overlay').get_attribute('hidden') is None
+        assert page.locator('#sequence-diagram').get_attribute('viewBox') == '0 0 900 430'
         for slot in range(3):
             page.locator(f'#roi-draw-{slot}').click()
             box = page.locator('#mri-image').bounding_box()
@@ -137,6 +141,10 @@ def run(url, screenshot):
         assert page.locator('#sequence-diagram .roi-image-sample').count() == 3
         page.locator('#roi-name-0').fill('White matter')
         assert 'White matter' in page.locator('#sequence-diagram').text_content()
+        page.locator('#define-rois').uncheck()
+        assert page.locator('#roi-overlay').is_visible()
+        assert page.locator('#roi-overlay polygon').count() == 3
+        assert page.locator('#sequence-diagram .roi-signal-curve').count() == 3
         old_sample = page.locator('#sequence-diagram .roi-chart-current').get_attribute('x1')
         slide('#parameter-TE', 0.02)
         new_sample = page.locator('#sequence-diagram .roi-chart-current').get_attribute('x1')
@@ -146,6 +154,8 @@ def run(url, screenshot):
         assert page.locator('#sequence-diagram .roi-signal-curve').count() == 0
         slide('#slice', 50)
         assert page.locator('#sequence-diagram .roi-signal-curve').count() == 3
+        assert page.locator('#roi-overlay polygon').count() == 3
+        page.locator('#define-rois').check()
         page.locator('#roi-draw-0').click()
         page.keyboard.press('Escape')
         assert page.locator('#sequence-diagram .roi-signal-curve').count() == 3
@@ -173,11 +183,53 @@ def run(url, screenshot):
         }""")
         if screenshot:
             page.screenshot(path=str(screenshot), full_page=True)
-        for width in [390, 620, 850]:
+        page.locator('#dark-mode').uncheck()
+        for width in [320, 390, 620, 621, 850]:
             page.set_viewport_size({"width": width, "height": 844})
+            page.wait_for_function("(phone) => document.querySelector('.controls').parentElement.classList.contains('viewer-content') === phone", arg=width <= 620)
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), f"Overflow at {width}px"
-            box = page.locator(".image-stage").bounding_box()
-            assert abs(box["width"] - box["height"]) < 1
+            if width <= 620:
+                assert page.locator('html').get_attribute('data-theme') == 'dark'
+                assert not page.locator('.settings').is_visible()
+                assert not page.locator('.pixel-inspector').is_visible()
+                for selector in ['#mobile-roi-panel', '#mobile-diagram-panel', '#mobile-equations-panel']:
+                    if page.locator(selector).evaluate('el => el.open'):
+                        page.locator(selector + ' > summary').click()
+                        page.wait_for_function("document.querySelector('#lab').dataset.expandedPanels === String(['#mobile-diagram-panel', '#mobile-equations-panel'].filter(id => document.querySelector(id).open).length)")
+                full_image = page.locator('#image-stage').bounding_box()
+                page.locator('#mobile-equations-panel > summary').click()
+                page.wait_for_function("!document.querySelector('#equations-panel').hidden")
+                assert page.locator('#image-stage').bounding_box()['height'] < full_image['height']
+                page.locator('#mobile-equations-panel > summary').click()
+                page.locator('#mobile-diagram-panel > summary').click()
+                page.wait_for_function("!document.querySelector('#diagram-panel').hidden")
+                small_image = page.locator('#image-stage').bounding_box()
+                page.locator('#mobile-roi-panel > summary').click()
+                page.wait_for_function("!document.querySelector('#roi-panel').hidden && document.querySelector('#diagram-panel').hidden")
+                image_box = page.locator('#image-stage').bounding_box()
+                roi_box = page.locator('#mobile-roi-dock').bounding_box()
+                assert image_box['height'] > small_image['height'], 'ROI editing must restore drawing space'
+                assert image_box['y'] + image_box['height'] <= roi_box['y']
+                assert roi_box['y'] + roi_box['height'] <= 845
+                assert not page.locator('#sequence').is_visible()
+                assert page.locator('#roi-panel').evaluate("el => el.parentElement.id === 'mobile-roi-dock'")
+                assert page.locator('#mri-image').is_visible()
+                page.locator('#mobile-roi-panel > summary').click()
+                page.wait_for_function("document.querySelector('#roi-panel').hidden")
+                assert page.locator('#sequence').is_visible()
+                for sequence in ['SE', 'IR', 'GRE']:
+                    page.select_option('#sequence', sequence)
+                    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+                    assert page.locator('.controls').bounding_box()['y'] + page.locator('.controls').bounding_box()['height'] <= 845
+                page.select_option('#sequence', 'SE')
+                page.locator('#mobile-noise-free').click()
+                assert page.locator('#mobile-noise-free').get_attribute('aria-pressed') == 'true'
+                page.locator('#mobile-noise-free').click()
+            else:
+                assert page.locator('html').get_attribute('data-theme') == 'light', 'Desktop theme preference is retained'
+                assert page.locator('.settings').is_visible()
+                assert page.locator('.pixel-inspector').is_visible()
+                assert page.locator('#roi-panel').evaluate("el => el.parentElement.classList.contains('control-panels')")
         page.set_viewport_size({"width": 390, "height": 844})
         if screenshot:
             page.screenshot(path=str(screenshot.with_name("mobile-" + screenshot.name)), full_page=True)

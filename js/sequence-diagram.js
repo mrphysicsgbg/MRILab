@@ -106,7 +106,7 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
     const maximum = Math.max(0.001, ...finite) * 1.08;
     const minimum = signed ? Math.min(-0.001, ...finite) * 1.08 : 0;
     const y = value => 650 - (value - minimum) / (maximum - minimum) * 245;
-    text(LEFT, 373, signed ? 'ROI mean (a.u.) · solid: signed + noise · dotted: magnitude' : 'ROI mean signal + noise magnitude (a.u.)', 'diagram-text', 'start');
+    text(LEFT, 373, signed ? 'ROI mean (a.u.) · solid: magnitude · dotted: signed + noise' : 'ROI mean signal + noise magnitude (a.u.)', 'diagram-text', 'start');
     for (let i = 0; i <= 4; i++) {
       const value = minimum + (maximum - minimum) * i / 4;
       line(LEFT, y(value), RIGHT, y(value), 'roi-chart-grid');
@@ -125,17 +125,21 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
           open = true;
         });
         svg.append(node('path', { d, class: 'roi-signal-curve', stroke: curve.region.color,
-          ...(signed && magnitude ? { 'stroke-dasharray': '2 6', 'stroke-linecap': 'round' } : {}),
+          ...(signed && !magnitude ? { 'stroke-dasharray': '0 7', 'stroke-linecap': 'round' } : {}),
           'data-signal': magnitude ? 'magnitude' : 'signed', 'data-roi': curve.region.slot }));
       };
-      if (signed) drawCurve(curve.signedValues, false);
       drawCurve(curve.values, true);
+      if (signed) drawCurve(curve.signedValues, false);
       const mean = means.get(curve.region.slot);
-      if (Number.isFinite(mean)) svg.append(node('circle', { cx: axis.x(model.echo), cy: y(mean), r: 5,
-        fill: curve.region.color, class: 'roi-image-sample', 'data-roi': curve.region.slot }));
       const signedMean = signedMeans.get(curve.region.slot);
-      if (signed && Number.isFinite(signedMean)) svg.append(node('circle', { cx: axis.x(model.echo), cy: y(signedMean), r: 5,
-        fill: 'none', stroke: curve.region.color, 'stroke-width': 2, class: 'roi-signed-sample', 'data-roi': curve.region.slot }));
+      // Draw a larger hollow ring first, then the signed dot. Both remain
+      // distinguishable when positive signed and magnitude means coincide.
+      if (Number.isFinite(mean)) svg.append(node('circle', { cx: axis.x(model.echo), cy: y(mean), r: signed ? 6 : 5,
+        fill: signed ? 'var(--field)' : curve.region.color,
+        ...(signed ? { stroke: curve.region.color, 'stroke-width': 2 } : {}),
+        class: 'roi-image-sample', 'data-signal': 'magnitude', 'data-roi': curve.region.slot }));
+      if (signed && Number.isFinite(signedMean)) svg.append(node('circle', { cx: axis.x(model.echo), cy: y(signedMean), r: 3.5,
+        fill: curve.region.color, class: 'roi-signed-sample', 'data-signal': 'signed', 'data-roi': curve.region.slot }));
       const legendX = LEFT + index * 240;
       // Match each legend sample to its curve and sampling marker.
       if (signed) {
@@ -145,9 +149,9 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
           svg.append(node('line', { x1: legendX, x2: legendX + 36, y1: legendY, y2: legendY,
             stroke: curve.region.color, 'stroke-width': 2.5, class: 'roi-legend-line',
             'data-signal': magnitude ? 'magnitude' : 'signed', 'data-roi': curve.region.slot,
-            ...(magnitude ? { 'stroke-dasharray': '2 6', 'stroke-linecap': 'round' } : {}) }));
+            ...(!magnitude ? { 'stroke-dasharray': '0 7', 'stroke-linecap': 'round' } : {}) }));
           svg.append(node('circle', { cx: legendX + 18, cy: legendY, r: 4,
-            fill: magnitude ? curve.region.color : 'var(--surface)', stroke: curve.region.color,
+            fill: magnitude ? 'var(--field)' : curve.region.color, stroke: curve.region.color,
             'stroke-width': 2, class: 'roi-legend-marker', 'data-signal': magnitude ? 'magnitude' : 'signed' }));
           text(legendX + 45, legendY + 4, magnitude ? 'Magnitude' : 'Signed + noise', 'diagram-text', 'start');
         }
@@ -157,7 +161,7 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
       }
     }
     svg.append(node('line', { x1: axis.x(model.echo), x2: axis.x(model.echo), y1: 400, y2: 650, class: 'roi-chart-current' }));
-    text(450, 724, signed ? `Image sampling at t = ${model.echo.toFixed(3)} s (TI + TE) · filled: magnitude · hollow: signed` : `Image sampling at TE = ${parameters.TE.toFixed(3)} s · Colored dots are the image ROI means`);
+    text(450, 724, signed ? `Image sampling at t = ${model.echo.toFixed(3)} s (TI + TE) · hollow: magnitude · filled: signed` : `Image sampling at TE = ${parameters.TE.toFixed(3)} s · Colored dots are the image ROI means`);
     if (!trace.curves.length) text(450, 520, 'Draw regions on the image to see their signal curves.');
   } else {
   // Generic normalized envelope when no ROI analysis is active.

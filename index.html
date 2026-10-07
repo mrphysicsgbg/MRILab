@@ -20,7 +20,7 @@
       </div>
       <div class="settings" role="group" aria-label="Display options">
         <label class="switch-label"><input id="dark-mode" type="checkbox" role="switch" checked><span class="switch-track" aria-hidden="true"></span>Dark mode</label>
-        <label class="switch-label"><input id="show-equations" type="checkbox" role="switch" aria-controls="equations-panel"><span class="switch-track" aria-hidden="true"></span>Show signal equations</label>
+        <label class="switch-label equations-option"><input id="show-equations" type="checkbox" role="switch" aria-controls="equations-panel"><span class="switch-track" aria-hidden="true"></span>Show signal equations</label>
         <label class="switch-label"><input id="show-diagram" type="checkbox" role="switch" aria-controls="diagram-panel"><span class="switch-track" aria-hidden="true"></span>Sequence diagram</label>
         <label class="switch-label"><input id="define-rois" type="checkbox" role="switch" aria-controls="roi-panel"><span class="switch-track" aria-hidden="true"></span>Define ROIs</label>
       </div>
@@ -38,9 +38,12 @@
             <div class="control-heading"><label for="slice">Slice position</label><output id="slice-value" for="slice">50 / —</output></div>
             <input id="slice" type="range" min="0" max="89" value="50" step="1">
             <div class="range-endpoints"><span>First slice</span><span>Last slice</span></div>
-            <label class="switch-label noise-option"><input id="noise-free" type="checkbox" role="switch"><span class="switch-track" aria-hidden="true"></span>Noise free</label>
           </div>
-          <button id="reset" type="button"><span aria-hidden="true">↺</span> Reset parameters</button>
+          <div class="control-actions">
+            <label class="switch-label noise-option"><input id="noise-free" type="checkbox" role="switch"><span class="switch-track" aria-hidden="true"></span>Noise free</label>
+            <button id="mobile-noise-free" class="mobile-noise-button" type="button" aria-pressed="false">Noise free</button>
+            <button id="reset" type="button"><span aria-hidden="true">↺</span> Reset parameters</button>
+          </div>
         </fieldset>
       </aside>
       <aside id="roi-panel" class="roi-panel" hidden aria-labelledby="roi-title">
@@ -62,15 +65,30 @@
           </div>
         </div>
         <div class="viewer-content">
+          <div id="simulation-view" class="simulation-view">
           <div id="image-stage" class="image-stage" title="Scroll down for the next slice; scroll up for the previous slice.">
             <div class="image-label"><span id="image-sequence">SPIN ECHO</span><span id="image-slice">SLICE 50</span></div>
             <div id="image-plane" class="image-plane" hidden>
               <canvas id="mri-image" role="img" aria-label="Simulated MRI brain image" hidden></canvas>
-              <svg id="roi-overlay" class="roi-overlay" hidden aria-label="Draw regions on the image"></svg>
+              <svg id="roi-overlay" class="roi-overlay" hidden role="img" aria-label="Saved regions on the image"></svg>
+              <svg id="roi-drawing-overlay" class="roi-overlay" hidden aria-label="Draw regions on the image"></svg>
             </div>
             <div class="loading" id="loading"><span class="loading-orbit" aria-hidden="true"></span><p id="load-message">Loading brain phantom…</p><button id="retry" type="button" hidden>Try again</button></div>
             <span id="image-object" class="image-caption">DIGITAL BRAIN PHANTOM</span>
           </div>
+          </div>
+          <div id="mobile-panels" class="mobile-panels">
+            <details id="mobile-diagram-panel">
+              <summary>Sequence diagram</summary>
+            </details>
+            <details id="mobile-equations-panel">
+              <summary>Signal equations</summary>
+            </details>
+            <details id="mobile-roi-panel">
+              <summary>Define ROIs</summary>
+            </details>
+          </div>
+          <div id="mobile-roi-dock" class="mobile-roi-dock"></div>
           <div class="image-details">
             <div class="viewer-footer"><span>Magnitude image <span class="footer-divider">/</span> Auto-normalized</span><span class="grayscale" aria-hidden="true"></span></div>
             <p class="scroll-hint">Scroll over the image to change slices.</p>

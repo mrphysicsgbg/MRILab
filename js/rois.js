@@ -12,7 +12,8 @@ const svgNode = (tag, attributes, text) => {
 };
 
 export function createRoiController({ state, elements, getPhantom, getRenderer, onHover, onPlot }) {
-  const overlay = elements['roi-overlay'];
+  const overlay = elements['roi-drawing-overlay'];
+  const savedOverlay = elements['roi-overlay'];
   let target = null, draft = null, pointer = null;
   let context = '', listContext = '', generation = 0, cachedKey = '', cachedTrace;
   let rows = [];
@@ -45,25 +46,29 @@ export function createRoiController({ state, elements, getPhantom, getRenderer, 
   // Keep ROI boundaries in phantom pixel coordinates.
   function drawOverlay() {
     overlay.replaceChildren();
+    savedOverlay.replaceChildren();
     const phantom = getPhantom();
-    const hidden = !state.showRois || !phantom;
+    const regions = phantom ? currentSet().regions.filter(Boolean) : [];
     // SVGElement has no HTMLElement.hidden setter: change the attribute itself.
-    overlay.toggleAttribute('hidden', hidden);
-    if (hidden) return;
+    // Saved outlines depend only on region data, never on editor visibility.
+    savedOverlay.toggleAttribute('hidden', !phantom || !regions.length);
+    overlay.toggleAttribute('hidden', !phantom || !state.showRois);
+    if (!phantom) return;
     overlay.setAttribute('viewBox', `0 0 ${phantom.width} ${phantom.height}`);
+    savedOverlay.setAttribute('viewBox', `0 0 ${phantom.width} ${phantom.height}`);
     // Receive drawing events even where the SVG has no painted ROI yet.
     overlay.append(svgNode('rect', {
       x: 0, y: 0, width: phantom.width, height: phantom.height, fill: 'transparent',
       'pointer-events': target === null ? 'none' : 'all', 'data-roi-hit-area': '',
     }));
-    for (const region of currentSet().regions.filter(Boolean)) {
-      overlay.append(svgNode('polygon', {
+    for (const region of regions) {
+      savedOverlay.append(svgNode('polygon', {
         points: region.points.map(point => `${point.x},${point.y}`).join(' '),
         fill: region.color, 'fill-opacity': 0.15, stroke: region.color,
         'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke',
       }));
       const first = region.points[0];
-      overlay.append(svgNode('text', { x: Math.min(first.x, phantom.width - 5), y: Math.max(4, first.y - 1),
+      savedOverlay.append(svgNode('text', { x: Math.min(first.x, phantom.width - 5), y: Math.max(4, first.y - 1),
         fill: region.color, class: 'roi-overlay-label' }, String(region.slot + 1)));
     }
     if (draft && draft.length > 1) overlay.append(svgNode('polyline', {
@@ -179,8 +184,9 @@ export function createRoiController({ state, elements, getPhantom, getRenderer, 
     elements['roi-slice-note'].textContent = `Draw up to three regions. Regions belong to slice ${state.slice}; returning to a slice restores its regions.`;
     const phantom = getPhantom();
     elements['roi-controls'].disabled = !phantom;
-    if (!state.showRois) { currentPlot = null; cancelDrawing(); overlay.setAttribute('hidden', ''); return; }
-    if (!phantom) { currentPlot = null; overlay.setAttribute('hidden', ''); status('Load a simulation object to draw regions.'); return; }
+    // Collapsing the editor stops drawing; saved regions still drive the diagram.
+    if (!state.showRois) cancelDrawing();
+    if (!phantom) { currentPlot = null; drawOverlay(); status('Load a simulation object to draw regions.'); return; }
     if (context !== key()) {
       cancelDrawing(); context = key(); listContext = ''; cachedKey = '';
       status('');
@@ -190,32 +196,38 @@ export function createRoiController({ state, elements, getPhantom, getRenderer, 
     const currentList = `${key()}:${generation}`;
     if (listContext !== currentList) { buildRows(); listContext = currentList; }
     drawOverlay();
-    const regions = set.regions.filter(Boolean);
+    updatePlot();
+    rows.forEach((output, slot) => {
+      const region = set.regions[slot], mean = currentPlot?.means.get(slot);
+      output.textContent = region ? `${region.indices.length} pixels · Mean ${Number.isFinite(mean) ? mean.toPrecision(5) : 'undefined'} a.u.` : 'Not drawn';
+    });
+    if (notify) onPlot?.();
+  }
+
+  // Plot data belongs to saved regions, independently of the editor lifecycle.
+  function updatePlot() {
+    if (!getPhantom()) { currentPlot = null; cachedKey = ''; return; }
     const curveKey = JSON.stringify([key(), generation, state.sequence, state.noiseFree, state.parameters]);
-    if (cachedKey !== curveKey) {
-      for (const region of regions) {
-        for (let i = 0; i < region.indices.length; i++) region.noise[i] = getRenderer().getNoise(region.indices[i]);
-      }
-      cachedTrace = traceRegions(sequence, state.parameters, regions, state.noiseFree);
-      cachedKey = curveKey;
+    if (cachedKey === curveKey) return;
+    const sequence = sequences[state.sequence];
+    const regions = currentSet().regions.filter(Boolean);
+    for (const region of regions) {
+      for (let i = 0; i < region.indices.length; i++) region.noise[i] = getRenderer().getNoise(region.indices[i]);
     }
+    cachedTrace = traceRegions(sequence, state.parameters, regions, state.noiseFree);
+    cachedKey = curveKey;
     const means = new Map(), signedMeans = new Map();
     for (const region of regions) {
       sequence.simulate(region.maps, state.parameters, region.buffer);
       means.set(region.slot, meanMagnitude(region.buffer, region.noise, state.noiseFree));
       signedMeans.set(region.slot, meanSigned(region.buffer, region.noise, state.noiseFree));
     }
-    rows.forEach((output, slot) => {
-      const region = set.regions[slot], mean = means.get(slot);
-      output.textContent = region ? `${region.indices.length} pixels · Mean ${Number.isFinite(mean) ? mean.toPrecision(5) : 'undefined'} a.u.` : 'Not drawn';
-    });
-    currentPlot = { trace: cachedTrace, means, signedMeans };
-    if (notify) onPlot?.();
+    currentPlot = regions.length ? { trace: cachedTrace, means, signedMeans } : null;
   }
 
   return {
     update, start, cancelDrawing,
-    getPlot() { return currentPlot; },
+    getPlot() { updatePlot(); return currentPlot; },
     invalidate() { cachedKey = ''; },
     get isDrawing() { return draft !== null; },
   };
