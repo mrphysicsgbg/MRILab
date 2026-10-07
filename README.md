@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/MRIxLab-icon.jpg" width="300" alt="Project logo">
+</p>
+
 # MRIxLab
 
 A static, interactive MRI contrast laboratory using the real EEN200 digital brain phantom. Vanilla ES modules and Canvas with a locally bundled MathJax renderer for LaTeX equations; no application backend, build step, Python runtime, or WebAssembly.
