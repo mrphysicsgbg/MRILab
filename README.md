@@ -43,6 +43,12 @@ If Pages settings are unavailable, check your repository permissions and GitHub
 plan; public repositories support Pages on GitHub Free.
 See [GitHub's publishing instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
+## Browser icon and shared-link previews
+
+The browser and mobile home-screen icons are resized versions of `assets/MRIxLab-icon.jpg`. The static Open Graph and Twitter metadata in `index.html` use the original JPEG as the shared-link image, including in Teams. The image URL is absolute and points to `https://mrphysicsgbg.github.io/MRIxLab/assets/MRIxLab-icon.jpg`.
+
+Publish `index.html` and the `assets` directory together. Share the public GitHub Pages URL; Teams cannot retrieve a local `localhost` page. Preview services may cache older results, so previously shared links may take time to show the new image. If the public hosting address changes, update the canonical, Open Graph, and Twitter URLs in `index.html`.
+
 ## Behavior
 
 Choose Spin Echo, Inversion Recovery or Gradient Echo. Controls and defaults are generated from `js/sequences.js`. Sequence changes restore that sequence's defaults; reset restores parameters and retains your slice. The slice selector covers zero-based indices 0–89, starting at 50.
