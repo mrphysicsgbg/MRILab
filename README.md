@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/MRIxLab-icon.jpg" width="300" alt="Project logo">
+  <img src="assets/MRIxLab-emblem.jpg" width="100%" alt="MRI xLab">
 </p>
 
 # MRIxLab
 
-A static, interactive MRI contrast laboratory using the real EEN200 digital brain phantom. Vanilla ES modules and Canvas with a locally bundled MathJax renderer for LaTeX equations; no application backend, build step, Python runtime, or WebAssembly.
+An interactive contrast exploration lab deployed as a static web app. Vanilla ES modules and Canvas with a locally bundled MathJax renderer for LaTeX equations; no application backend, build step, Python runtime, or WebAssembly.
 
 ## Run
 
@@ -47,7 +47,7 @@ Choose Spin Echo, Inversion Recovery or Gradient Echo. Controls and defaults are
 
 The desktop left column contains Sequence & parameters, followed by Regions & contrast when enabled. This compact column stays visible while the page scrolls. Each parameter slider spans the panel width on its own row, and the sequence and ROI panels fit together without a separate sidebar scrollbar. Shorter desktop viewports omit the explanatory sequence and slice paragraphs to retain space for the controls. The object dropdown sits beside the Simulation object & image title and currently offers Digital brain phantom. Add converted datasets to the `simulationObjects` catalog in `js/phantom.js` to offer more objects; the selector and loading path use that catalog automatically. Loaded objects are retained in memory for reuse, and slice limits follow the selected object's dimensions.
 
-On phone-sized viewports (620 px wide or less), panels 01 and 02 combine into one primary panel in dark mode. The image stays visible at the top, and compact pulse-sequence controls stay at the bottom. Signal equations, Sequence diagram and Define ROIs use expandable panels in the middle, replacing the display switches. Opening equations or the diagram reduces the image height; panel contents scroll independently. Opening Define ROIs closes the diagram and replaces the bottom pulse-sequence controls with ROI controls, retaining a larger image for drawing. Closing Define ROIs restores the pulse-sequence controls; saved ROI outlines stay visible on the image and their mean signal curves stay visible in the diagram until the regions are deleted. Voxel hover measurements are hidden. The mobile slice selector is hidden while saved ROIs exist and returns when all ROIs are deleted. Noise free uses a button in the controls. Resizing to a wider viewport restores the desktop layout, display switches and saved theme preference, while retaining simulation settings.
+On phone-sized viewports (620 px wide or less), panels 01 and 02 combine into one primary panel in dark mode. The image stays visible at the top, and compact pulse-sequence controls stay at the bottom. Sequence diagram, Signal equations and Define ROIs share one row of expandable links in the middle, replacing the display switches. Expanded contents appear beneath this row; the links remain visible while contents scroll. Opening equations or the diagram reduces the image height; panel contents scroll independently. Opening Define ROIs closes the diagram and replaces the bottom pulse-sequence controls with ROI controls, retaining a larger image for drawing. Closing Define ROIs restores the pulse-sequence controls; saved ROI outlines stay visible on the image and their mean signal curves stay visible in the diagram until the regions are deleted. Voxel hover measurements are hidden. The mobile slice selector is hidden while saved ROIs exist and returns when all ROIs are deleted. Noise free uses a button in the controls. Resizing to a wider viewport restores the desktop layout, display switches and saved theme preference, while retaining simulation settings.
 
 Scroll over the image to navigate slices: down advances, up goes back. Mouse wheels and trackpads are supported; small trackpad deltas accumulate before advancing. Scrolling updates the slice slider, readout, image and voxel measurements together, and regenerates noise. Navigation stops at the volume boundaries. Scrolling outside the image scrolls the page normally; browser zoom gestures are preserved.
 

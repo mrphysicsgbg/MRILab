@@ -78,15 +78,18 @@
           </div>
           </div>
           <div id="mobile-panels" class="mobile-panels">
-            <details id="mobile-diagram-panel">
-              <summary>Sequence diagram</summary>
-            </details>
-            <details id="mobile-equations-panel">
-              <summary>Signal equations</summary>
-            </details>
-            <details id="mobile-roi-panel">
-              <summary>Define ROIs</summary>
-            </details>
+            <div class="mobile-panel-links" role="group" aria-label="Expandable panels">
+              <details id="mobile-diagram-panel">
+                <summary aria-controls="diagram-panel">Sequence diagram</summary>
+              </details>
+              <details id="mobile-equations-panel">
+                <summary aria-controls="equations-panel">Signal equations</summary>
+              </details>
+              <details id="mobile-roi-panel">
+                <summary aria-controls="roi-panel">Define ROIs</summary>
+              </details>
+            </div>
+            <div id="mobile-panel-content" class="mobile-panel-content"></div>
           </div>
           <div id="mobile-roi-dock" class="mobile-roi-dock"></div>
           <div class="image-details">

@@ -17,7 +17,7 @@ const elements = Object.fromEntries(['object', 'image-object', 'sequence', 'para
   'show-diagram', 'diagram-panel', 'diagram-number', 'diagram-sequence', 'sequence-diagram', 'diagram-notes', 'diagram-signal-description',
   'define-rois', 'roi-panel', 'roi-overlay', 'roi-drawing-overlay', 'image-plane', 'roi-list', 'roi-controls', 'roi-cancel',
   'roi-slice-note', 'roi-status', 'equation-number', 'simulation-view', 'mobile-equations-panel',
-  'mobile-diagram-panel', 'mobile-roi-panel', 'mobile-roi-dock', 'mobile-noise-free'].map(id => [id, document.getElementById(id)]));
+  'mobile-diagram-panel', 'mobile-roi-panel', 'mobile-panel-content', 'mobile-roi-dock', 'mobile-noise-free'].map(id => [id, document.getElementById(id)]));
 let phantom;
 const loadedObjects = new Map();
 let signal;
@@ -35,14 +35,14 @@ const viewerHeading = document.querySelector('.viewer-header h2');
 const viewerIndex = document.querySelector('.viewer-header .section-index');
 const desktopViewerTitle = viewerHeading.textContent;
 const expandablePanels = [
-  ['showEquations', 'equations-panel', 'mobile-equations-panel'],
   ['showDiagram', 'diagram-panel', 'mobile-diagram-panel'],
+  ['showEquations', 'equations-panel', 'mobile-equations-panel'],
   ['showRois', 'roi-panel', 'mobile-roi-panel'],
 ];
 function updatePhoneLayout() {
   if (phoneLayout.matches) {
     viewerContent.insertBefore(controls, document.querySelector('.image-details'));
-    for (const [, panel, disclosure] of expandablePanels) elements[disclosure].append(elements[panel]);
+    for (const [, panel] of expandablePanels) elements['mobile-panel-content'].append(elements[panel]);
     controls.append(elements.status);
   } else {
     controlPanels.prepend(controls);
@@ -112,7 +112,7 @@ function updateViewOptions() {
   for (const [key, , disclosure] of expandablePanels) elements[disclosure].open = state[key];
   // ROI editing occupies the bottom dock instead of reducing the drawing area.
   if (phoneLayout.matches) {
-    const roiParent = state.showRois ? elements['mobile-roi-dock'] : elements['mobile-roi-panel'];
+    const roiParent = state.showRois ? elements['mobile-roi-dock'] : elements['mobile-panel-content'];
     if (elements['roi-panel'].parentElement !== roiParent) roiParent.append(elements['roi-panel']);
     const statusParent = state.showRois ? elements['mobile-roi-dock'] : controls;
     if (elements.status.parentElement !== statusParent) statusParent.append(elements.status);

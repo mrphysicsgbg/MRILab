@@ -222,14 +222,22 @@ h3 { font-size: 12px; font-weight: 600; margin: 26px 0 14px; }
   .viewer-content { flex: 1; min-height: 0; grid-template-rows: minmax(48px, 1fr) minmax(0, auto) auto; overflow: hidden; }
   .lab:not([data-expanded-panels="0"]) .viewer-content { grid-template-rows: clamp(80px, 18dvh, 160px) minmax(0, 1fr) auto; }
   .lab[data-expanded-panels="2"] .viewer-content, .lab[data-expanded-panels="3"] .viewer-content { grid-template-rows: clamp(64px, 14dvh, 120px) minmax(0, 1fr) auto; }
-  .mobile-panels { display: block; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-  .mobile-panels details { border-top: 1px solid var(--line); }
-  .mobile-panels summary { cursor: pointer; padding: 9px 12px; min-height: 36px; font-size: 12px; font-weight: 600; }
-  .mobile-panels details[open] > summary { color: var(--green); background: var(--field); }
+  .mobile-panels { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .mobile-panel-links { display: flex; flex-shrink: 0; border-top: 1px solid var(--line); }
+  .mobile-panel-links details { flex: 1.1; min-width: 0; }
+  .mobile-panel-links details:first-child { flex: 1.2; }
+  .mobile-panel-links details:last-child { flex: 0.9; }
+  .mobile-panel-links details + details { border-left: 1px solid var(--line); }
+  .mobile-panel-links summary { display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 9px 4px; min-height: 36px; font-size: clamp(10px, 2.8vw, 12px); font-weight: 600; white-space: nowrap; list-style: none; }
+  .mobile-panel-links summary::-webkit-details-marker { display: none; }
+  .mobile-panel-links summary::before { content: '▸'; flex-shrink: 0; }
+  .mobile-panel-links details[open] > summary { color: var(--green); background: var(--field); }
+  .mobile-panel-links details[open] > summary::before { transform: rotate(90deg); }
+  .mobile-panel-content { min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
   .viewer-header { max-width: none; margin: 0; padding: 4px 12px; gap: 6px; flex-shrink: 0; }
   .viewer-header .section-heading { gap: 7px; }
   .viewer-header h2 { font-size: 12px; }
-  .viewer-header .section-index { padding: 3px 4px; }
+  .viewer-header .section-index { display: none; }
   .object-selection { flex: 1 1 140px; justify-content: flex-end; }
   .object-selection select { min-height: 36px; max-width: 100%; }
   .image-stage { max-width: none; aspect-ratio: auto; height: 100%; min-height: 0; border-radius: 0; container-type: size; }

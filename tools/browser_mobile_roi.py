@@ -30,6 +30,17 @@ def run(url=None):
                 page.route('http://mrilab.test/**', serve)
             page.goto(url or 'http://mrilab.test/')
             page.wait_for_function("!document.querySelector('#simulation-controls').disabled")
+            def check_link_row():
+                summaries = page.locator('.mobile-panel-links summary')
+                boxes = [summaries.nth(i).bounding_box() for i in range(3)]
+                assert max(box['y'] for box in boxes) - min(box['y'] for box in boxes) < 1, 'All disclosure links share one row'
+                assert all(box['x'] >= 0 and box['x'] + box['width'] <= width + 1 for box in boxes)
+                assert summaries.evaluate_all('els => els.every(el => el.scrollWidth <= el.clientWidth + 1)'), 'Titles fit without horizontal overflow'
+                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+
+            check_link_row()
+            links_height = page.locator('.mobile-panel-links').bounding_box()['height']
+            assert page.locator('#mobile-panels').bounding_box()['height'] <= links_height + 1, 'Closed disclosures occupy only one row'
             assert page.locator('#slice').is_visible()
             page.locator('#mobile-roi-panel > summary').click()
             page.wait_for_function("!document.querySelector('#roi-panel').hidden")
@@ -63,6 +74,7 @@ def run(url=None):
                     assert with_roi != without_roi, f'Collapsed ROI is not painted at {width}px'
                 page.locator('#mobile-diagram-panel > summary').click()
                 page.wait_for_function("!document.querySelector('#diagram-panel').hidden")
+                check_link_row()
                 assert page.locator('#sequence-diagram .roi-signal-curve').count() == 1, f'Plot lost at {width}px'
                 assert page.locator('#sequence-diagram .roi-image-sample').count() == 1
                 page.locator('#mobile-roi-panel > summary').click()
