@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="assets/MRIxLab-emblem.jpg" width="100%" alt="MRI xLab">
+  <a href="https://mrphysicsgbg.github.io/MRIxLab/">
+    <img src="assets/MRIxLab-emblem.jpg" width="100%" alt="MRI xLab">
+  </a>
 </p>
 
 # MRIxLab
