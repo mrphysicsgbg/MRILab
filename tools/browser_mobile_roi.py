@@ -86,6 +86,10 @@ def run(url=None):
                 assert page.locator('#roi-panel').is_hidden()
                 assert page.locator('#sequence-diagram .roi-signal-curve').count() >= 1
                 assert page.locator('#roi-overlay').is_visible()
+                if sequence == 'IR':
+                    assert page.locator('.roi-signal-curve[data-component="longitudinal"]').count() == 2
+                    assert page.locator('.roi-signal-curve[data-component="transverse"]').count() == 2
+                    page.locator('#sequence-diagram').screenshot(path=f'/tmp/mrilab-stacked-ir-{width}.png')
             page.locator('#mobile-roi-panel > summary').click()
             page.wait_for_function("!document.querySelector('#roi-panel').hidden")
             page.get_by_role('button', name='Delete ROI 1', exact=True).click()

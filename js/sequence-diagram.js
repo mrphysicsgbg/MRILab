@@ -51,7 +51,7 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
     model.signalEnd = roiPlot.trace.values.at(-1);
   }
   const axis = createTimeAxis(model);
-  svg.setAttribute('viewBox', roiPlot ? (model.kind === 'IR' ? '0 0 900 830' : '0 0 900 780') : '0 0 900 430');
+  svg.setAttribute('viewBox', roiPlot ? (model.kind === 'IR' ? '0 0 900 935' : '0 0 900 780') : '0 0 900 430');
   svg.setAttribute('aria-label', `${sequence.label}: TR ${parameters.TR} seconds, TE ${parameters.TE} seconds${model.kind === 'IR' ? `, TI ${parameters.TI} seconds` : ''}${model.kind === 'GRE' ? `, flip angle ${parameters.FA} degrees` : ''}. Simplified sequence diagram.`);
   svg.append(node('title', {}, `${sequence.label} pulse sequence`));
   const line = (x1, y1, x2, y2, className = 'diagram-baseline') => svg.append(node('line', { x1, y1, x2, y2, class: className }));
@@ -67,12 +67,17 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
   duration(0, model.repetition, 27, `TR = ${parameters.TR.toFixed(3)} s`);
   if (model.kind === 'IR') duration(0, model.excitation, 56, `TI = ${parameters.TI.toFixed(3)} s`);
   duration(model.excitation, model.echo, 85, `TE = ${parameters.TE.toFixed(3)} s`);
-  const tracks = [['RF', 150], ['G slice', 210], ['G phase', 265], ['G read', 320], ['Signal', roiPlot ? 650 : 375]];
+  const stacked = roiPlot && model.kind === 'IR';
+  const signalBottom = stacked ? 755 : 650;
+  const tracks = [['RF', 150], ['G slice', 210], ['G phase', 265], ['G read', 320], ...(stacked ? [['Mz', 527.5], ['Mxy', signalBottom]] : [['Signal', roiPlot ? 650 : 375]])];
   for (const [label, y] of tracks) {
     line(LEFT - 18, y, RIGHT, y);
-    text(18, y + 4, label, 'diagram-text', 'start');
+    if (!roiPlot || y <= 320) text(18, y + 4, label, 'diagram-text', 'start');
   }
-  line(axis.x(model.echo), 103, axis.x(model.echo), roiPlot ? 650 : 397, 'diagram-echo-marker');
+  line(axis.x(model.echo), 103, axis.x(model.echo), roiPlot ? signalBottom : 397, 'diagram-echo-marker');
+  if (model.kind === 'IR') {
+    line(axis.x(model.excitation), 103, axis.x(model.excitation), roiPlot ? signalBottom : 397, 'diagram-ti-marker');
+  }
   for (const pulse of model.rf) {
     const x = axis.x(pulse.time);
     const height = pulse.angle / 180 * 40;
@@ -105,31 +110,48 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
     finite.push(...Array.from(means.values()).filter(Number.isFinite));
     const maximum = Math.max(0.001, ...finite) * 1.08;
     const minimum = signed ? Math.min(-0.001, ...finite) * 1.08 : 0;
-    const y = value => 650 - (value - minimum) / (maximum - minimum) * 245;
-    text(LEFT, 373, signed ? 'ROI mean (a.u.) · solid: magnitude · dotted: signed + noise' : 'ROI mean signal + noise magnitude (a.u.)', 'diagram-text', 'start');
-    for (let i = 0; i <= 4; i++) {
-      const value = minimum + (maximum - minimum) * i / 4;
-      line(LEFT, y(value), RIGHT, y(value), 'roi-chart-grid');
-      text(LEFT - 9, y(value) + 4, value.toFixed(3), 'diagram-text', 'end');
-      const time = trace.values.at(-1) * i / 4;
-      text(axis.x(time), 676, time.toFixed(3));
+    // Keep both plots on the timing diagram's linear time axis and amplitude
+    // scale. Include TI in both: longitudinal recovery ends where excitation
+    // transfers it to the initial transverse signal.
+    const charts = signed ? [
+      { component: 'longitudinal', bottom: 527.5, label: 'Longitudinal magnetization (Mz)', includes: time => time <= model.excitation },
+      { component: 'transverse', bottom: 755, label: 'Transversal magnetization (Mxy)', includes: time => time >= model.excitation },
+    ] : [{ component: 'transverse', bottom: 650, label: 'Transversal magnetization (Mxy)', includes: () => true }];
+    const plotHeight = signed ? 122.5 : 245;
+    for (const chart of charts) {
+      const y = value => chart.bottom - (value - minimum) / (maximum - minimum) * plotHeight;
+      chart.y = y;
+      const labelY = chart.bottom - plotHeight / 2;
+      svg.append(node('text', { x: 22, y: labelY, class: 'diagram-text roi-axis-label',
+        'text-anchor': 'middle', transform: `rotate(-90 22 ${labelY})`,
+        'data-component': chart.component }, chart.label));
+      for (let i = 0; i <= 4; i++) {
+        const value = minimum + (maximum - minimum) * i / 4;
+        line(LEFT, y(value), RIGHT, y(value), 'roi-chart-grid');
+        text(LEFT - 9, y(value) + 4, value.toFixed(3), 'diagram-text', 'end');
+        const time = trace.values.at(-1) * i / 4;
+        text(axis.x(time), chart.bottom + 26, time.toFixed(3));
+      }
+      line(LEFT, y(0), RIGHT, y(0), 'diagram-baseline');
+      text((axis.x(0) + axis.x(model.signalEnd)) / 2, chart.bottom + 49, signed ? 'Time from inversion (s)' : 'Time after excitation (s)');
     }
-    line(LEFT, y(0), RIGHT, y(0), 'diagram-baseline');
-    text((axis.x(0) + axis.x(model.signalEnd)) / 2, 699, signed ? 'Time from inversion (s) · before TI: longitudinal · after TI: transverse' : 'Time after excitation (s)');
+    const y = charts.at(-1).y;
     for (const [index, curve] of trace.curves.entries()) {
-      const drawCurve = (values, magnitude) => {
+      const drawCurve = (values, magnitude, chart) => {
         let d = '', open = false;
         values.forEach((value, i) => {
-          if (!Number.isFinite(value)) { open = false; return; }
-          d += `${open ? 'L' : 'M'} ${axis.x(trace.values[i]).toFixed(3)} ${y(value).toFixed(3)} `;
+          if (!chart.includes(trace.values[i]) || !Number.isFinite(value)) { open = false; return; }
+          d += `${open ? 'L' : 'M'} ${axis.x(trace.values[i]).toFixed(3)} ${chart.y(value).toFixed(3)} `;
           open = true;
         });
         svg.append(node('path', { d, class: 'roi-signal-curve', stroke: curve.region.color,
           ...(signed && !magnitude ? { 'stroke-dasharray': '0 7', 'stroke-linecap': 'round' } : {}),
-          'data-signal': magnitude ? 'magnitude' : 'signed', 'data-roi': curve.region.slot }));
+          'data-signal': magnitude ? 'magnitude' : 'signed', 'data-component': chart.component, 'data-roi': curve.region.slot }));
       };
-      drawCurve(curve.values, true);
-      if (signed) drawCurve(curve.signedValues, false);
+      for (const chart of charts) {
+        drawCurve(curve.values, true, chart);
+        if (signed) drawCurve(curve.signedValues, false, chart);
+      }
       const mean = means.get(curve.region.slot);
       const signedMean = signedMeans.get(curve.region.slot);
       // Draw a larger hollow ring first, then the signed dot. Both remain
@@ -143,9 +165,9 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
       const legendX = LEFT + index * 240;
       // Match each legend sample to its curve and sampling marker.
       if (signed) {
-        text(legendX, 753, `${curve.region.slot + 1}: ${curve.region.label.slice(0, 24)}`, 'diagram-text', 'start');
+        text(legendX, signalBottom + 103, `${curve.region.slot + 1}: ${curve.region.label.slice(0, 24)}`, 'diagram-text', 'start');
         for (const magnitude of [false, true]) {
-          const legendY = magnitude ? 802 : 776;
+          const legendY = signalBottom + (magnitude ? 152 : 126);
           svg.append(node('line', { x1: legendX, x2: legendX + 36, y1: legendY, y2: legendY,
             stroke: curve.region.color, 'stroke-width': 2.5, class: 'roi-legend-line',
             'data-signal': magnitude ? 'magnitude' : 'signed', 'data-roi': curve.region.slot,
@@ -160,8 +182,8 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
         text(legendX + 25, 753, `${curve.region.slot + 1}: ${curve.region.label.slice(0, 24)}`, 'diagram-text', 'start');
       }
     }
-    svg.append(node('line', { x1: axis.x(model.echo), x2: axis.x(model.echo), y1: 400, y2: 650, class: 'roi-chart-current' }));
-    text(450, 724, signed ? `Image sampling at t = ${model.echo.toFixed(3)} s (TI + TE) · hollow: magnitude · filled: signed` : `Image sampling at TE = ${parameters.TE.toFixed(3)} s · Colored dots are the image ROI means`);
+    svg.append(node('line', { x1: axis.x(model.echo), x2: axis.x(model.echo), y1: signalBottom - plotHeight - 5, y2: signalBottom, class: 'roi-chart-current' }));
+    text(450, signalBottom + 74, signed ? `Image sampling at t = ${model.echo.toFixed(3)} s (TI + TE) · hollow: magnitude · filled: signed` : `Image sampling at TE = ${parameters.TE.toFixed(3)} s · Colored dots are the image ROI means`);
     if (!trace.curves.length) text(450, 520, 'Draw regions on the image to see their signal curves.');
   } else {
   // Generic normalized envelope when no ROI analysis is active.
@@ -182,8 +204,8 @@ export function renderSequenceDiagram(svg, sequence, parameters, roiPlot = null)
       svg.append(node('rect', { x: x - 9, y: y - 5, width: 18, height: 10, class: 'diagram-gap-mask' }));
       path(`M ${x - 7} ${y + 4} l 5 -8 M ${x + 1} ${y + 4} l 5 -8`, 'diagram-break');
     }
-    text(x, roiPlot ? 676 : 410, '⋯');
+    text(x, roiPlot ? signalBottom + 26 : 410, '⋯');
   }
-  return [...model.warnings, ...(roiPlot ? [model.kind === 'IR' ? 'Before TI, curves represent longitudinal recovery, not a measured transverse signal. After TI they use the reference image equation with fixed voxel noise; magnitude is averaged per voxel. Sampling is at TI + TE.' : 'ROI curves show the reference equations’ transverse evolution after excitation, with fixed voxel noise. The dots at TE match the image before grayscale normalization.'] : []), ...(axis.segments.some(item => item.compressed)
+  return [...model.warnings, ...(roiPlot ? [model.kind === 'IR' ? 'The upper plot shows Longitudinal magnetization before TI; the lower plot shows Transversal magnetization after TI. The dotted vertical line marks the 90° excitation at TI. Longitudinal recovery is not a measured transverse signal. After TI they use the reference image equation with fixed voxel noise; magnitude is averaged per voxel. Sampling is at TI + TE.' : 'ROI curves show the reference equations’ transverse evolution after excitation, with fixed voxel noise. The dots at TE match the image before grayscale normalization.'] : []), ...(axis.segments.some(item => item.compressed)
     ? ['Long delays are compressed at the // marks; use the labeled times for exact intervals.'] : [])];
 }

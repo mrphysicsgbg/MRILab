@@ -143,7 +143,7 @@ test('three ROIs can be drawn, renamed, redrawn, deleted and restored per slice'
   }
 });
 
-test('ROI plots stay linear within the signal window and align sampling at TI + TE for IR', () => {
+test('IR stacks longitudinal above transverse while preserving linear timing and image sampling', () => {
   const previousDocument = globalThis.document;
   try {
     globalThis.document = { createElementNS: (_, tag) => new Node(tag) };
@@ -157,7 +157,7 @@ test('ROI plots stay linear within the signal window and align sampling at TI + 
     const echoLine = svg.children.find(node => node.attributes.class === 'diagram-echo-marker');
     assert.equal(marker.attributes.cx, echoLine.attributes.x1);
     const curves = svg.children.filter(node => node.attributes.class === 'roi-signal-curve');
-    assert.equal(curves.length, 2);
+    assert.equal(curves.length, 4);
     assert.equal(curves[0].attributes.stroke, curves[1].attributes.stroke);
     assert.equal(curves[0].attributes['stroke-dasharray'], undefined);
     assert.equal(curves[1].attributes['stroke-dasharray'], '0 7');
@@ -173,9 +173,38 @@ test('ROI plots stay linear within the signal window and align sampling at TI + 
     assert.equal(legends.find(node => node.attributes['data-signal'] === 'signed').attributes['stroke-dasharray'], '0 7');
     assert.equal(legends.find(node => node.attributes['data-signal'] === 'magnitude').attributes['stroke-dasharray'], undefined);
     assert.ok(svg.children.some(node => node.tag === 'text' && /^-0\./.test(node.textContent)));
-    const coordinates = curves.find(node => node.attributes['data-signal'] === 'signed').attributes.d.match(/[ML] ([\d.]+) ([\d.]+)/g).map(point => point.split(' ').slice(1).map(Number));
-    assert.equal(coordinates[0][0], 110);
-    assert.ok(Math.abs((coordinates[2][0] - coordinates[1][0]) / (coordinates[1][0] - coordinates[0][0]) - 0.08 / 1.2) < 1e-4);
+    const coordinates = component => curves.find(node => node.attributes['data-signal'] === 'signed' && node.attributes['data-component'] === component).attributes.d.match(/[ML] ([\d.]+) ([\d.]+)/g).map(point => point.split(' ').slice(1).map(Number));
+    const longitudinal = coordinates('longitudinal');
+    const transverse = coordinates('transverse');
+    assert.equal(longitudinal.length, 2, 'longitudinal stops at TI');
+    assert.equal(transverse.length, 3, 'transverse begins at TI');
+    assert.equal(longitudinal[0][0], 110);
+    assert.equal(longitudinal.at(-1)[0], transverse[0][0], 'both plots share the excitation time');
+    const tiLine = svg.children.find(node => node.attributes.class === 'diagram-ti-marker');
+    assert.ok(Math.abs(Number(tiLine.attributes.x1) - transverse[0][0]) < 0.001, 'TI marker aligns with the 90-degree pulse and both plot boundaries');
+    assert.equal(tiLine.attributes.x1, tiLine.attributes.x2);
+    assert.equal(tiLine.attributes.y1, '103');
+    assert.equal(tiLine.attributes.y2, '755', 'TI marker spans sequence tracks and both graphs');
+    assert.equal(svg.attributes.viewBox, '0 0 900 935');
+    assert.ok(longitudinal.every(point => point[1] >= 405 && point[1] <= 527.5), 'upper plot has half its former 245-unit height');
+    assert.ok(transverse.every(point => point[1] >= 632.5 && point[1] <= 755), 'lower plot has half its former 245-unit height');
+    assert.ok(Math.max(...longitudinal.map(point => point[1])) < Math.min(...transverse.map(point => point[1])), 'longitudinal graph is above transverse');
+    assert.ok(Math.abs((transverse[1][0] - transverse[0][0]) / (longitudinal[1][0] - longitudinal[0][0]) - 0.08 / 1.2) < 1e-4);
+    assert.ok(Math.abs(Number(marker.attributes.cy) - transverse[1][1]) < 0.001, 'image mean belongs to transverse graph');
+    assert.ok(svg.children.some(node => node.textContent?.includes('Longitudinal magnetization (Mz)')));
+    assert.ok(svg.children.some(node => node.textContent?.includes('Transversal magnetization (Mxy)')));
+    const axisLabels = svg.children.filter(node => node.attributes.class === 'diagram-text roi-axis-label');
+    assert.deepEqual(axisLabels.map(node => node.textContent), ['Longitudinal magnetization (Mz)', 'Transversal magnetization (Mxy)']);
+    assert.ok(axisLabels.every(node => node.attributes.transform.startsWith('rotate(-90')));
+    assert.ok(!svg.children.some(node => /ROI mean \(a.u.\)|before excitation at TI|after excitation at TI/.test(node.textContent ?? '')));
+    for (const sequence of [sequences.SE, sequences.GRE]) {
+      const single = new Node('svg');
+      renderSequenceDiagram(single, sequence, { ...parameters, FA: 30 }, plot);
+      const labels = single.children.filter(node => node.attributes.class === 'diagram-text roi-axis-label');
+      assert.equal(labels.length, 1);
+      assert.equal(labels[0].textContent, 'Transversal magnetization (Mxy)');
+      assert.ok(labels[0].attributes.transform.startsWith('rotate(-90'));
+    }
 
     assert.ok(svg.children.some(node => node.textContent?.includes('Image sampling at t = 1.280 s')));
   } finally {

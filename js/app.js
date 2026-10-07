@@ -202,7 +202,7 @@ function updateDiagram() {
   elements['diagram-notes'].textContent = renderSequenceDiagram(elements['sequence-diagram'], sequence, state.parameters,
     roiPlot).join(' ');
   elements['diagram-signal-description'].textContent = roiPlot
-    ? (state.sequence === 'IR' ? 'ROI curves start at inversion (t = 0): longitudinal recovery before TI, transverse decay after excitation. Solid: mean magnitude. Dotted: signed mean + noise. Image sampling occurs at TI + TE.' : 'RF heights indicate flip angle. Gradients and pulse widths are schematic. The enlarged signal track shows ROI mean magnitude; time starts at excitation, and image sampling is marked at TE.')
+    ? (state.sequence === 'IR' ? 'The upper ROI graph shows Longitudinal magnetization before TI; the lower graph shows Transversal magnetization after excitation. The dotted vertical line marks the 90° pulse at TI. Both share the time axis starting at inversion (t = 0). Solid: mean magnitude. Dotted: signed mean + noise. Image sampling occurs at TI + TE.' : 'RF heights indicate flip angle. Gradients and pulse widths are schematic. The enlarged signal track shows ROI mean magnitude; time starts at excitation, and image sampling is marked at TE.')
     : 'RF heights indicate flip angle. Gradient shapes and pulse widths are schematic. The signal is a normalized echo illustration, independent of the image and noise.';
 }
 

@@ -1,4 +1,4 @@
-# MRILab
+# MRIxLab
 
 A static, interactive MRI contrast laboratory using the real EEN200 digital brain phantom. Vanilla ES modules and Canvas with a locally bundled MathJax renderer for LaTeX equations; no application backend, build step, Python runtime, or WebAssembly.
 
@@ -25,14 +25,14 @@ The `.nojekyll` file tells GitHub Pages to serve the static files without Jekyll
    git push origin main
    ```
 
-2. Open [the repository's Pages settings](https://github.com/mrphysicsgbg/MRILab/settings/pages).
+2. Open [the repository's Pages settings](https://github.com/mrphysicsgbg/MRIxLab/settings/pages).
 3. Under **Build and deployment**, select **Deploy from a branch**.
 4. Choose **main** and **/(root)**, then click **Save**.
 5. Wait for the Pages deployment to finish in the repository's **Actions** tab.
-6. Open [MRILab](https://mrphysicsgbg.github.io/MRILab/).
+6. Open [MRIxLab](https://mrphysicsgbg.github.io/MRIxLab/).
 
 Future pushes to `main` update the site automatically. All assets, including the
-phantom and MathJax, use relative URLs compatible with the `/MRILab/` path.
+phantom and MathJax, use relative URLs compatible with the `/MRIxLab/` path.
 If Pages settings are unavailable, check your repository permissions and GitHub
 plan; public repositories support Pages on GitHub Free.
 See [GitHub's publishing instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
@@ -53,7 +53,7 @@ Noise free, below Slice position, displays the magnitude of the raw signal witho
 
 Define ROIs places Regions & contrast below Sequence & parameters in the far-left column and enables freehand drawing. The Object dropdown stays above the image; voxel values and image details sit below it. Press and trace on the image, then release to close the region. There are three slots per object and slice, with editable names and Draw/Redraw/Delete controls. Escape or Cancel drawing discards an unfinished trace and retains existing regions. Regions are saved in memory per slice for this session; revisiting a slice restores its masks. ROI boundaries stay aligned when the image is resized and remain visible when the ROI editor is collapsed. Only drawing controls depend on whether that editor is expanded. Wheel navigation is paused during an active trace.
 
-ROI plots appear in an enlarged signal track within the sequence diagram and remain available when Define ROIs is collapsed. Changing TR, TE, TI, flip angle or Noise free updates the saved curves without reopening the ROI editor. They continue to follow slice changes; slices without defined regions use the standard signal illustration. Define ROIs does not open the sequence diagram automatically; open Sequence diagram separately to view the ROI plots. SE and GRE show mean `abs(S(t) + noise)` against time after excitation, using `t` in place of TE. IR starts at the inversion pulse (t = 0) and overlays solid mean magnitudes with dotted signed means in the same ROI colors, on an axis that includes negative values. Image sampling is at `TI + TE`; hollow dots show magnitude means and filled dots show signed means. Each ROI legend shows separate solid/hollow and dotted/filled samples. The image remains a single magnitude image.
+ROI plots appear in an enlarged signal track within the sequence diagram and remain available when Define ROIs is collapsed. Changing TR, TE, TI, flip angle or Noise free updates the saved curves without reopening the ROI editor. They continue to follow slice changes; slices without defined regions use the standard signal illustration. Define ROIs does not open the sequence diagram automatically; open Sequence diagram separately to view the ROI plots. SE and GRE show mean `abs(S(t) + noise)` against time after excitation, using `t` in place of TE, with the vertical axis labeled Transversal magnetization (Mxy). IR uses two vertically stacked graphs: Longitudinal magnetization above and Transversal magnetization below, with compact plot heights and vertical axis labels instead of plot headings. A dotted vertical line marks the 90° excitation pulse at TI across the sequence tracks and both plots. Both use the same time axis starting at inversion (t = 0) and amplitude scale, including negative values. Each graph overlays solid mean magnitudes with dotted signed means in the same ROI colors. Image sampling is at `TI + TE`; hollow dots show magnitude means and filled dots show signed means. Each ROI legend shows separate solid/hollow and dotted/filled samples. The image remains a single magnitude image.
 
 Before IR excitation, the plot shows longitudinal recovery `Mz(t) = rho * [1 - (2 - exp(-(TR - TI)/T1)) * exp(-t/T1)]`. This finite-TR initial condition assumes recovery from the preceding excitation before inversion, and joins the reference IR equation at TI. This is longitudinal magnetization, not measured transverse signal. After TI, the original image equation is evaluated with `TE = t - TI`. The distinction follows the inversion/excitation timing in [qMRLab's inversion-recovery signal modeling](https://qmrlab.org/t1_book/01/ir_blog/IR_SignalModelling.html); the teaching curve extends the original simulator rather than changing its image equations. Nonphysical timing combinations remain available and carry the existing timing warning.
 
@@ -99,7 +99,7 @@ Optional real-browser smoke checks (with the static server running):
 ```sh
 python3 -m pip install playwright
 python3 -m playwright install chromium
-python3 tools/browser_smoke.py --screenshot /tmp/mrilab.png
+python3 tools/browser_smoke.py --screenshot /tmp/mrixlab.png
 python3 tools/browser_mobile_roi.py
 ```
 
